@@ -56,6 +56,15 @@ public class ConfigController {
   private static final Type configurationTypeReference = new TypeToken<Map<String, String>>() {
       }.getType();
 
+  /**
+   *  eg:
+   *  http://ip:port/configs/appid/cluster/namespace?dataCenter=dataCenterStr&ip=ipStr
+   *  &message=messageStr&releaseKey=releaseKeyStr
+   *
+   *  http://1.1.1.1:8080/configs/10001/default/FX.grayscaleIP.properties?dataCenter=gl&ip=127.0.0.1
+   *  &message={"details":{"10001+default+FX.grayscaleIP":1159}}&releaseKey=20181101155641-af002bf0f95b6782
+   *
+   */
   @RequestMapping(value = "/{appId}/{clusterName}/{namespace:.+}", method = RequestMethod.GET)
   public ApolloConfig queryConfig(@PathVariable String appId, @PathVariable String clusterName,
                                   @PathVariable String namespace,
@@ -65,32 +74,37 @@ public class ConfigController {
                                   @RequestParam(value = "messages", required = false) String messagesAsString,
                                   HttpServletRequest request, HttpServletResponse response) throws IOException {
     String originalNamespace = namespace;
-    //strip out .properties suffix
+    //namespace去掉.properties后缀
     namespace = namespaceUtil.filterNamespaceName(namespace);
     //fix the character case issue, such as FX.apollo <-> fx.apollo
     namespace = namespaceUtil.normalizeNamespace(appId, namespace);
 
+    //如果clientIp不存在，则拿到请求的ip
     if (Strings.isNullOrEmpty(clientIp)) {
       clientIp = tryToGetClientIp(request);
     }
 
+    //eg: messagesAsString = “detail”:{"10001+default+FX.grayscaleIP":1159}
+    //key="appId+cluster+namespace"  value=通知id
     ApolloNotificationMessages clientMessages = transformMessages(messagesAsString);
 
     List<Release> releases = Lists.newLinkedList();
 
     String appClusterNameLoaded = clusterName;
+    //appid存在
     if (!ConfigConsts.NO_APPID_PLACEHOLDER.equalsIgnoreCase(appId)) {
-      Release currentAppRelease = configService.loadConfig(appId, clientIp, appId, clusterName, namespace,
-          dataCenter, clientMessages);
+      Release currentAppRelease = configService.loadConfig(appId, clientIp, appId, clusterName, namespace, dataCenter, clientMessages);
 
       if (currentAppRelease != null) {
         releases.add(currentAppRelease);
         //we have cluster search process, so the cluster name might be overridden
+        //
         appClusterNameLoaded = currentAppRelease.getClusterName();
       }
     }
 
     //if namespace does not belong to this appId, should check if there is a public configuration
+    //如果namespace不属于该appId,需要检查其是否为公共配置
     if (!namespaceBelongsToAppId(appId, namespace)) {
       Release publicRelease = this.findPublicConfig(appId, clientIp, clusterName, namespace,
           dataCenter, clientMessages);
@@ -99,35 +113,29 @@ public class ConfigController {
       }
     }
 
+    //私有和公共配置都找不到
     if (releases.isEmpty()) {
-      response.sendError(HttpServletResponse.SC_NOT_FOUND,
-          String.format(
-              "Could not load configurations with appId: %s, clusterName: %s, namespace: %s",
-              appId, clusterName, originalNamespace));
-      Tracer.logEvent("Apollo.Config.NotFound",
-          assembleKey(appId, clusterName, originalNamespace, dataCenter));
+      response.sendError(HttpServletResponse.SC_NOT_FOUND,String.format("Could not load configurations with appId: %s, clusterName: %s, namespace: %s",appId, clusterName, originalNamespace));
+      Tracer.logEvent("Apollo.Config.NotFound",assembleKey(appId, clusterName, originalNamespace, dataCenter));
       return null;
     }
 
     auditReleases(appId, clusterName, dataCenter, clientIp, releases);
 
-    String mergedReleaseKey = releases.stream().map(Release::getReleaseKey)
-            .collect(Collectors.joining(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR));
+    String mergedReleaseKey = releases.stream().map(Release::getReleaseKey).collect(Collectors.joining(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR));
 
+    //客户端版本和服务器版本一致，返回304
     if (mergedReleaseKey.equals(clientSideReleaseKey)) {
       // Client side configuration is the same with server side, return 304
       response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
-      Tracer.logEvent("Apollo.Config.NotModified",
-          assembleKey(appId, appClusterNameLoaded, originalNamespace, dataCenter));
+      Tracer.logEvent("Apollo.Config.NotModified",assembleKey(appId, appClusterNameLoaded, originalNamespace, dataCenter));
       return null;
     }
 
-    ApolloConfig apolloConfig = new ApolloConfig(appId, appClusterNameLoaded, originalNamespace,
-        mergedReleaseKey);
+    ApolloConfig apolloConfig = new ApolloConfig(appId, appClusterNameLoaded, originalNamespace,mergedReleaseKey);
     apolloConfig.setConfigurations(mergeReleaseConfigurations(releases));
 
-    Tracer.logEvent("Apollo.Config.Found", assembleKey(appId, appClusterNameLoaded,
-        originalNamespace, dataCenter));
+    Tracer.logEvent("Apollo.Config.Found", assembleKey(appId, appClusterNameLoaded,originalNamespace, dataCenter));
     return apolloConfig;
   }
 
@@ -187,16 +195,13 @@ public class ConfigController {
     return keyParts.stream().collect(Collectors.joining(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR));
   }
 
-  private void auditReleases(String appId, String cluster, String dataCenter, String clientIp,
-                             List<Release> releases) {
+  private void auditReleases(String appId, String cluster, String dataCenter, String clientIp,List<Release> releases) {
     if (Strings.isNullOrEmpty(clientIp)) {
       //no need to audit instance config when there is no ip
       return;
     }
     for (Release release : releases) {
-      instanceConfigAuditUtil.audit(appId, cluster, dataCenter, clientIp, release.getAppId(),
-          release.getClusterName(),
-          release.getNamespaceName(), release.getReleaseKey());
+      instanceConfigAuditUtil.audit(appId, cluster, dataCenter, clientIp, release.getAppId(),release.getClusterName(),release.getNamespaceName(), release.getReleaseKey());
     }
   }
 
@@ -208,6 +213,7 @@ public class ConfigController {
     return request.getRemoteAddr();
   }
 
+  //eg: messagesAsString = “detail”:{"10001+default+FX.grayscaleIP":1159}
   ApolloNotificationMessages transformMessages(String messagesAsString) {
     ApolloNotificationMessages notificationMessages = null;
     if (!Strings.isNullOrEmpty(messagesAsString)) {

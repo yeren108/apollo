@@ -3,7 +3,7 @@ package com.ctrip.framework.apollo.common.config;
 import org.springframework.core.env.MapPropertySource;
 
 import java.util.Map;
-
+//继承了spring中的MapPropertySource，并新增了一个刷新方法
 public abstract class RefreshablePropertySource extends MapPropertySource {
 
 

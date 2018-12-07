@@ -25,6 +25,7 @@ public class ClusterController {
   @Autowired
   private ClusterService clusterService;
 
+  //创建集群
   @RequestMapping(path = "/apps/{appId}/clusters", method = RequestMethod.POST)
   public ClusterDTO create(@PathVariable("appId") String appId,
                            @RequestParam(value = "autoCreatePrivateNamespace", defaultValue = "true") boolean autoCreatePrivateNamespace,

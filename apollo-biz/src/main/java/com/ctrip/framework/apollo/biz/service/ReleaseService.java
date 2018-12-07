@@ -101,6 +101,7 @@ public class ReleaseService {
 
   }
 
+  //找到当前条件下最新的一条发布记录
   public Release findLatestActiveRelease(String appId, String clusterName, String namespaceName) {
     return releaseRepository.findFirstByAppIdAndClusterNameAndNamespaceNameAndIsAbandonedFalseOrderByIdDesc(appId,
                                                                                                             clusterName,

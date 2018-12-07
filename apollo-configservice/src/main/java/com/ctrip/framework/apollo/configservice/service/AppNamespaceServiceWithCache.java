@@ -168,10 +168,14 @@ public class AppNamespaceServiceWithCache implements InitializingBean {
     }
   }
 
+  //
   private void mergeAppNamespaces(List<AppNamespace> appNamespaces) {
     for (AppNamespace appNamespace : appNamespaces) {
+      //key=appid+namespaceName   value=appNamespace
       appNamespaceCache.put(assembleAppNamespaceKey(appNamespace), appNamespace);
+      //key=id     value=appNamespace
       appNamespaceIdCache.put(appNamespace.getId(), appNamespace);
+      //如果是公共的,存放到公共缓存中，key=namespaceName  value=appNamespace
       if (appNamespace.isPublic()) {
         publicAppNamespaceCache.put(appNamespace.getName(), appNamespace);
       }
@@ -201,19 +205,23 @@ public class AppNamespaceServiceWithCache implements InitializingBean {
   }
 
   //for those updated app namespaces
+  //处理所有更新的namspace
   private Set<Long> handleUpdatedAppNamespaces(Iterable<AppNamespace> appNamespaces) {
     Set<Long> foundIds = Sets.newHashSet();
+    //遍历所有的有更改的namespace
     for (AppNamespace appNamespace : appNamespaces) {
       foundIds.add(appNamespace.getId());
+      //根据ID取出缓存中的AppNamespace
       AppNamespace thatInCache = appNamespaceIdCache.get(appNamespace.getId());
-      if (thatInCache != null && appNamespace.getDataChangeLastModifiedTime().after(thatInCache
-          .getDataChangeLastModifiedTime())) {
+      //如果缓存的AppNamespace不为空，并且该appNamespace修改晚于缓存中的修改，将更新后的appNamespace缓存
+      if (thatInCache != null && appNamespace.getDataChangeLastModifiedTime().after(thatInCache.getDataChangeLastModifiedTime())) {
         appNamespaceIdCache.put(appNamespace.getId(), appNamespace);
         String oldKey = assembleAppNamespaceKey(thatInCache);
         String newKey = assembleAppNamespaceKey(appNamespace);
         appNamespaceCache.put(newKey, appNamespace);
 
         //in case appId or namespaceName changes
+        //如果appId或者namespaceName被更改了，也就是appId+namespaceName 变化了，就移除老的。
         if (!newKey.equals(oldKey)) {
           appNamespaceCache.remove(oldKey);
         }
@@ -222,6 +230,7 @@ public class AppNamespaceServiceWithCache implements InitializingBean {
           publicAppNamespaceCache.put(appNamespace.getName(), appNamespace);
 
           //in case namespaceName changes
+          //如果namespace改变了，则去掉之前的缓存
           if (!appNamespace.getName().equals(thatInCache.getName()) && thatInCache.isPublic()) {
             publicAppNamespaceCache.remove(thatInCache.getName());
           }
@@ -257,6 +266,7 @@ public class AppNamespaceServiceWithCache implements InitializingBean {
     }
   }
 
+  //返回字符串  appid+namespaceName   eg:10001+application
   private String assembleAppNamespaceKey(AppNamespace appNamespace) {
     return STRING_JOINER.join(appNamespace.getAppId(), appNamespace.getName());
   }

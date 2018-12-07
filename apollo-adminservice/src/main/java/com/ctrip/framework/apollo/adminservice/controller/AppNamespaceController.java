@@ -30,6 +30,7 @@ public class AppNamespaceController {
   @Autowired
   private NamespaceService namespaceService;
 
+  //创建
   @RequestMapping(value = "/apps/{appId}/appnamespaces", method = RequestMethod.POST)
   public AppNamespaceDTO create(@RequestBody AppNamespaceDTO appNamespace,
                                 @RequestParam(defaultValue = "false") boolean silentCreation) {
@@ -55,6 +56,7 @@ public class AppNamespaceController {
     return BeanUtils.transfrom(AppNamespaceDTO.class, entity);
   }
 
+  //删除
   @RequestMapping(value = "/apps/{appId}/appnamespaces/{namespaceName:.+}", method = RequestMethod.DELETE)
   public void delete(@PathVariable("appId") String appId, @PathVariable("namespaceName") String namespaceName,
       @RequestParam String operator) {
@@ -65,6 +67,7 @@ public class AppNamespaceController {
     appNamespaceService.deleteAppNamespace(entity, operator);
   }
 
+  //查找publicNamespace
   @RequestMapping(value = "/appnamespaces/{publicNamespaceName}/namespaces", method = RequestMethod.GET)
   public List<NamespaceDTO> findPublicAppNamespaceAllNamespaces(@PathVariable String publicNamespaceName, Pageable pageable) {
 
@@ -73,11 +76,13 @@ public class AppNamespaceController {
     return BeanUtils.batchTransform(NamespaceDTO.class, namespaces);
   }
 
+  //查找publicNamespaceName的关联个数
   @RequestMapping(value = "/appnamespaces/{publicNamespaceName}/associated-namespaces/count", method = RequestMethod.GET)
   public int countPublicAppNamespaceAssociatedNamespaces(@PathVariable String publicNamespaceName) {
     return namespaceService.countPublicAppNamespaceAssociatedNamespaces(publicNamespaceName);
   }
 
+  //查找某个appid下的所有namespace
   @RequestMapping(value = "/apps/{appId}/appnamespaces", method = RequestMethod.GET)
   public List<AppNamespaceDTO> getAppNamespaces(@PathVariable("appId") String appId) {
 

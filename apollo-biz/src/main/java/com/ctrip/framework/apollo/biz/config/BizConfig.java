@@ -41,6 +41,7 @@ public class BizConfig extends RefreshableConfig {
 
   @Override
   protected List<RefreshablePropertySource> getRefreshablePropertySources() {
+    //这里返回的是当前集群中数据库中的配置
     return Collections.singletonList(propertySource);
   }
 
@@ -79,6 +80,7 @@ public class BizConfig extends RefreshableConfig {
     return namespaceValueLengthOverride;
   }
 
+  //查看数据库中namespace开关是否打开，打开：一次发布只有一个人可以修改配置   没有打开：一次发布可以有多人修改配置
   public boolean isNamespaceLockSwitchOff() {
     return !getBooleanProperty("namespace.lock.switch", false);
   }

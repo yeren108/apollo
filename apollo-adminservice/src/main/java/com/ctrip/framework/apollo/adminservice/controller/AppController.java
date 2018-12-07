@@ -41,7 +41,7 @@ public class AppController {
     if (managedEntity != null) {
       throw new BadRequestException("app already exist.");
     }
-
+    //app不存在则创建
     entity = adminService.createNewApp(entity);
 
     dto = BeanUtils.transfrom(AppDTO.class, entity);
@@ -54,6 +54,7 @@ public class AppController {
     if (entity == null) {
       throw new NotFoundException("app not found for appId " + appId);
     }
+    //app存在则删除
     adminService.deleteApp(entity, operator);
   }
 
@@ -62,7 +63,7 @@ public class AppController {
     if (!Objects.equals(appId, app.getAppId())) {
       throw new BadRequestException("The App Id of path variable and request body is different");
     }
-
+    //appid和修改提交的提交app的appid一致则修改
     appService.update(app);
   }
 
@@ -70,6 +71,7 @@ public class AppController {
   public List<AppDTO> find(@RequestParam(value = "name", required = false) String name,
                            Pageable pageable) {
     List<App> app = null;
+    //name不为空按名字查找，name为空则查找所有，并分页展示
     if (StringUtils.isBlank(name)) {
       app = appService.findAll(pageable);
     } else {
@@ -80,6 +82,7 @@ public class AppController {
 
   @RequestMapping(value = "/apps/{appId:.+}", method = RequestMethod.GET)
   public AppDTO get(@PathVariable("appId") String appId) {
+    //按appid查找
     App app = appService.findOne(appId);
     if (app == null) {
       throw new NotFoundException("app not found for appId " + appId);

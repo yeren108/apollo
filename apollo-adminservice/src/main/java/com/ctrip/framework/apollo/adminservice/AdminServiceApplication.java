@@ -17,9 +17,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @PropertySource(value = {"classpath:adminservice.properties"})
 @EnableAutoConfiguration
 @EnableTransactionManagement
-@ComponentScan(basePackageClasses = {ApolloCommonConfig.class,
-    ApolloBizConfig.class,
-    AdminServiceApplication.class})
+@ComponentScan(basePackageClasses = {ApolloCommonConfig.class, ApolloBizConfig.class, AdminServiceApplication.class})
 public class AdminServiceApplication {
   public static void main(String[] args) {
     SpringApplication.run(AdminServiceApplication.class, args);
