@@ -91,11 +91,13 @@ public class ConfigController {
     List<Release> releases = Lists.newLinkedList();
 
     String appClusterNameLoaded = clusterName;
-    //appid存在
+    //appid不等于ApolloNoAppIdPlaceHolder时
     if (!ConfigConsts.NO_APPID_PLACEHOLDER.equalsIgnoreCase(appId)) {
+      //当前release版本
       Release currentAppRelease = configService.loadConfig(appId, clientIp, appId, clusterName, namespace, dataCenter, clientMessages);
 
       if (currentAppRelease != null) {
+        //当前release版本不为空时，拿出来
         releases.add(currentAppRelease);
         //we have cluster search process, so the cluster name might be overridden
         //
@@ -119,7 +121,7 @@ public class ConfigController {
       Tracer.logEvent("Apollo.Config.NotFound",assembleKey(appId, clusterName, originalNamespace, dataCenter));
       return null;
     }
-
+    //审计
     auditReleases(appId, clusterName, dataCenter, clientIp, releases);
 
     String mergedReleaseKey = releases.stream().map(Release::getReleaseKey).collect(Collectors.joining(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR));
@@ -131,7 +133,7 @@ public class ConfigController {
       Tracer.logEvent("Apollo.Config.NotModified",assembleKey(appId, appClusterNameLoaded, originalNamespace, dataCenter));
       return null;
     }
-
+    //不一致时，返回当前版本的配置
     ApolloConfig apolloConfig = new ApolloConfig(appId, appClusterNameLoaded, originalNamespace,mergedReleaseKey);
     apolloConfig.setConfigurations(mergeReleaseConfigurations(releases));
 
@@ -141,15 +143,17 @@ public class ConfigController {
 
   private boolean namespaceBelongsToAppId(String appId, String namespaceName) {
     //Every app has an 'application' namespace
+    //每一个app都有一个叫application的namespace，所以返回true
     if (Objects.equals(ConfigConsts.NAMESPACE_APPLICATION, namespaceName)) {
       return true;
     }
 
     //if no appId is present, then no other namespace belongs to it
+    //如果没有appid，namespace就不属于任何appid
     if (ConfigConsts.NO_APPID_PLACEHOLDER.equalsIgnoreCase(appId)) {
       return false;
     }
-
+    //数据库中查询appid下是否含有该namespace
     AppNamespace appNamespace = appNamespaceService.findByAppIdAndNamespace(appId, namespaceName);
 
     return appNamespace != null;
@@ -162,6 +166,7 @@ public class ConfigController {
    */
   private Release findPublicConfig(String clientAppId, String clientIp, String clusterName,
                                    String namespace, String dataCenter, ApolloNotificationMessages clientMessages) {
+    //根据namespace名称找到共有的namespace
     AppNamespace appNamespace = appNamespaceService.findPublicNamespaceByName(namespace);
 
     //check whether the namespace's appId equals to current one
@@ -195,6 +200,7 @@ public class ConfigController {
     return keyParts.stream().collect(Collectors.joining(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR));
   }
 
+  //审计
   private void auditReleases(String appId, String cluster, String dataCenter, String clientIp,List<Release> releases) {
     if (Strings.isNullOrEmpty(clientIp)) {
       //no need to audit instance config when there is no ip
@@ -205,6 +211,7 @@ public class ConfigController {
     }
   }
 
+  //获取客户端IP
   private String tryToGetClientIp(HttpServletRequest request) {
     String forwardedFor = request.getHeader("X-FORWARDED-FOR");
     if (!Strings.isNullOrEmpty(forwardedFor)) {

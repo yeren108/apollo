@@ -47,7 +47,7 @@ public class ReleaseController {
   @Autowired
   private NamespaceBranchService namespaceBranchService;
 
-
+  //获取release
   @RequestMapping(value = "/releases/{releaseId}", method = RequestMethod.GET)
   public ReleaseDTO get(@PathVariable("releaseId") long releaseId) {
     Release release = releaseService.findOne(releaseId);
@@ -57,6 +57,7 @@ public class ReleaseController {
     return BeanUtils.transfrom(ReleaseDTO.class, release);
   }
 
+  //获取release集合
   @RequestMapping(value = "/releases", method = RequestMethod.GET)
   public List<ReleaseDTO> findReleaseByIds(@RequestParam("releaseIds") String releaseIds) {
     Set<Long> releaseIdSet = RELEASES_SPLITTER.splitToList(releaseIds).stream().map(Long::parseLong)
@@ -67,6 +68,7 @@ public class ReleaseController {
     return BeanUtils.batchTransform(ReleaseDTO.class, releases);
   }
 
+  //查询该条件下的所有release
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/releases/all", method = RequestMethod.GET)
   public List<ReleaseDTO> findAllReleases(@PathVariable("appId") String appId,
                                           @PathVariable("clusterName") String clusterName,
@@ -76,7 +78,7 @@ public class ReleaseController {
     return BeanUtils.batchTransform(ReleaseDTO.class, releases);
   }
 
-
+  //查询该条件下的所有活跃release
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/releases/active", method = RequestMethod.GET)
   public List<ReleaseDTO> findActiveReleases(@PathVariable("appId") String appId,
                                              @PathVariable("clusterName") String clusterName,
@@ -86,6 +88,7 @@ public class ReleaseController {
     return BeanUtils.batchTransform(ReleaseDTO.class, releases);
   }
 
+  //查询该条件下的最新的release
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/releases/latest", method = RequestMethod.GET)
   public ReleaseDTO getLatest(@PathVariable("appId") String appId,
                               @PathVariable("clusterName") String clusterName,
@@ -94,6 +97,7 @@ public class ReleaseController {
     return BeanUtils.transfrom(ReleaseDTO.class, release);
   }
 
+  //发布
   @Transactional
   @RequestMapping(path = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/releases", method = RequestMethod.POST)
   public ReleaseDTO publish(@PathVariable("appId") String appId,
@@ -103,11 +107,13 @@ public class ReleaseController {
                             @RequestParam(name = "comment", required = false) String releaseComment,
                             @RequestParam("operator") String operator,
                             @RequestParam(name = "isEmergencyPublish", defaultValue = "false") boolean isEmergencyPublish) {
+    //查看要发布的namespace是否存在
     Namespace namespace = namespaceService.findOne(appId, clusterName, namespaceName);
     if (namespace == null) {
       throw new NotFoundException(String.format("Could not find namespace for %s %s %s", appId,
                                                 clusterName, namespaceName));
     }
+    //发布
     Release release = releaseService.publish(namespace, releaseName, releaseComment, operator, isEmergencyPublish);
 
     //send release message
@@ -118,6 +124,7 @@ public class ReleaseController {
     } else {
       messageCluster = clusterName;
     }
+    //往apollo-release这个通道发送消息  TODO ??
     messageSender.sendMessage(ReleaseMessageKeyGenerator.generate(appId, messageCluster, namespaceName),
                               Topics.APOLLO_RELEASE_TOPIC);
     return BeanUtils.transfrom(ReleaseDTO.class, release);
@@ -161,6 +168,7 @@ public class ReleaseController {
 
   }
 
+  //回滚
   @Transactional
   @RequestMapping(path = "/releases/{releaseId}/rollback", method = RequestMethod.PUT)
   public void rollback(@PathVariable("releaseId") long releaseId,
@@ -176,6 +184,7 @@ public class ReleaseController {
                               Topics.APOLLO_RELEASE_TOPIC);
   }
 
+  //灰度发布
   @Transactional
   @RequestMapping(path = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/gray-del-releases", method = RequestMethod.POST)
   public ReleaseDTO publish(@PathVariable("appId") String appId,

@@ -96,6 +96,7 @@ public class BizConfig extends RefreshableConfig {
     return getValue("clogging.server.port");
   }
 
+  //namespace缓存扫描间隔，默认1
   public int appNamespaceCacheScanInterval() {
     int interval = getIntProperty("apollo.app-namespace-cache-scan.interval", DEFAULT_APPNAMESPACE_CACHE_SCAN_INTERVAL);
     return checkInt(interval, 1, Integer.MAX_VALUE, DEFAULT_APPNAMESPACE_CACHE_SCAN_INTERVAL);
@@ -105,6 +106,7 @@ public class BizConfig extends RefreshableConfig {
     return TimeUnit.SECONDS;
   }
 
+  //namespace缓存Rebuild间隔，默认60
   public int appNamespaceCacheRebuildInterval() {
     int interval = getIntProperty("apollo.app-namespace-cache-rebuild.interval", DEFAULT_APPNAMESPACE_CACHE_REBUILD_INTERVAL);
     return checkInt(interval, 1, Integer.MAX_VALUE, DEFAULT_APPNAMESPACE_CACHE_REBUILD_INTERVAL);

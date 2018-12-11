@@ -36,6 +36,7 @@ public class ReleaseHistoryController {
   @Autowired
   private ReleaseHistoryService releaseHistoryService;
 
+  //find1
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/releases/histories",
       method = RequestMethod.GET)
   public PageDTO<ReleaseHistoryDTO> findReleaseHistoriesByNamespace(
@@ -48,7 +49,7 @@ public class ReleaseHistoryController {
     return transform2PageDTO(result, pageable);
   }
 
-
+  //find2
   @RequestMapping(value = "/releases/histories/by_release_id_and_operation", method = RequestMethod.GET)
   public PageDTO<ReleaseHistoryDTO> findReleaseHistoryByReleaseIdAndOperation(
       @RequestParam("releaseId") long releaseId,
@@ -60,6 +61,7 @@ public class ReleaseHistoryController {
     return transform2PageDTO(result, pageable);
   }
 
+  //find3
   @RequestMapping(value = "/releases/histories/by_previous_release_id_and_operation", method = RequestMethod.GET)
   public PageDTO<ReleaseHistoryDTO> findReleaseHistoryByPreviousReleaseIdAndOperation(
       @RequestParam("previousReleaseId") long previousReleaseId,

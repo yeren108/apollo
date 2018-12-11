@@ -124,7 +124,7 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
     //block the startup process until load finished
     //this should happen before ReleaseMessageScanner due to autowire
     loadReleaseMessages(0);
-
+    // TODO ??
     executorService.submit(() -> {
       while (doScan.get() && !Thread.currentThread().isInterrupted()) {
         Transaction transaction = Tracer.newTransaction("Apollo.ReleaseMessageServiceWithCache",
@@ -173,7 +173,9 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
   }
 
   private void populateDataBaseInterval() {
+    //1
     scanInterval = bizConfig.releaseMessageCacheScanInterval();
+    //second
     scanIntervalTimeUnit = bizConfig.releaseMessageCacheScanIntervalTimeUnit();
   }
 

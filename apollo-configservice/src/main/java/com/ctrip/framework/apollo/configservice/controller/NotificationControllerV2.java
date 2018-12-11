@@ -261,6 +261,7 @@ public class NotificationControllerV2 implements ReleaseMessageListener {
     configNotification.addMessage(content, message.getId());
 
     //do async notification if too many clients
+    //当客户端太多时（>100），异步通知
     if (results.size() > bizConfig.releaseMessageNotificationBatch()) {
       largeNotificationBatchExecutorService.submit(() -> {
         logger.debug("Async notify {} clients for key {} with batch {}", results.size(), content,

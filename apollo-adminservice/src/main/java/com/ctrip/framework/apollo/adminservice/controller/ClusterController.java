@@ -50,6 +50,7 @@ public class ClusterController {
     return dto;
   }
 
+  //删除集群
   @RequestMapping(path = "/apps/{appId}/clusters/{clusterName:.+}", method = RequestMethod.DELETE)
   public void delete(@PathVariable("appId") String appId,
                      @PathVariable("clusterName") String clusterName, @RequestParam String operator) {
@@ -63,16 +64,18 @@ public class ClusterController {
     if(ConfigConsts.CLUSTER_NAME_DEFAULT.equals(entity.getName())){
       throw new BadRequestException("can not delete default cluster!");
     }
-
+    //operator记录操作人
     clusterService.delete(entity.getId(), operator);
   }
 
+  //查找appid下所有集群
   @RequestMapping(value = "/apps/{appId}/clusters", method = RequestMethod.GET)
   public List<ClusterDTO> find(@PathVariable("appId") String appId) {
     List<Cluster> clusters = clusterService.findParentClusters(appId);
     return BeanUtils.batchTransform(ClusterDTO.class, clusters);
   }
 
+  //根据appid和集群名查找集群
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName:.+}", method = RequestMethod.GET)
   public ClusterDTO get(@PathVariable("appId") String appId,
                         @PathVariable("clusterName") String clusterName) {
@@ -83,6 +86,7 @@ public class ClusterController {
     return BeanUtils.transfrom(ClusterDTO.class, cluster);
   }
 
+  //判断该条件下的集群是否存在
   @RequestMapping(value = "/apps/{appId}/cluster/{clusterName}/unique", method = RequestMethod.GET)
   public boolean isAppIdUnique(@PathVariable("appId") String appId,
                                @PathVariable("clusterName") String clusterName) {

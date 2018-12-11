@@ -179,18 +179,20 @@ public class NamespaceService {
   }
 
   public Namespace findChildNamespace(String appId, String parentClusterName, String namespaceName) {
+    //查找Namespace的记录，有两个以上的话就肯定有分支，否则返回无
     List<Namespace> namespaces = findByAppIdAndNamespaceName(appId, namespaceName);
     if (CollectionUtils.isEmpty(namespaces) || namespaces.size() == 1) {
       return null;
     }
-
+    //根据ParentClusterId查找集群表中是否有记录，有的话就存在子集群，并返回
     List<Cluster> childClusters = clusterService.findChildClusters(appId, parentClusterName);
     if (CollectionUtils.isEmpty(childClusters)) {
       return null;
     }
-
+    //得到所有的子集群名字
     Set<String> childClusterNames = childClusters.stream().map(Cluster::getName).collect(Collectors.toSet());
     //the child namespace is the intersection of the child clusters and child namespaces
+    //找到 子namespace，并返回
     for (Namespace namespace : namespaces) {
       if (childClusterNames.contains(namespace.getClusterName())) {
         return namespace;

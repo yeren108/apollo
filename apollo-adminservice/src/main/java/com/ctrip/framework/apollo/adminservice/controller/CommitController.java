@@ -21,6 +21,7 @@ public class CommitController {
   @Autowired
   private CommitService commitService;
 
+  //查看该条件下的提交记录
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/commit", method = RequestMethod.GET)
   public List<CommitDTO> find(@PathVariable String appId, @PathVariable String clusterName,
                               @PathVariable String namespaceName, Pageable pageable){

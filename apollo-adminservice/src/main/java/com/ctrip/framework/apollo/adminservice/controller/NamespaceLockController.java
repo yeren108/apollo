@@ -26,6 +26,7 @@ public class NamespaceLockController {
   @Autowired
   private BizConfig bizConfig;
 
+  //获取lock namespace
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/lock", method = RequestMethod.GET)
   public NamespaceLockDTO getNamespaceLockOwner(@PathVariable String appId, @PathVariable String clusterName,
                                                 @PathVariable String namespaceName) {

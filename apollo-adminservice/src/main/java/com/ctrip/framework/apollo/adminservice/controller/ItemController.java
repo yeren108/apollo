@@ -33,6 +33,7 @@ public class ItemController {
   @Autowired
   private CommitService commitService;
 
+  //配置新增
   @PreAcquireNamespaceLock
   @RequestMapping(path = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items", method = RequestMethod.POST)
   public ItemDTO create(@PathVariable("appId") String appId,
@@ -41,15 +42,17 @@ public class ItemController {
     Item entity = BeanUtils.transfrom(Item.class, dto);
 
     ConfigChangeContentBuilder builder = new ConfigChangeContentBuilder();
+    //检查配置是否存在
     Item managedEntity = itemService.findOne(appId, clusterName, namespaceName, entity.getKey());
     if (managedEntity != null) {
       throw new BadRequestException("item already exists");
     } else {
+      //保存配置
       entity = itemService.save(entity);
       builder.createItem(entity);
     }
     dto = BeanUtils.transfrom(ItemDTO.class, entity);
-
+    //提交配置
     Commit commit = new Commit();
     commit.setAppId(appId);
     commit.setClusterName(clusterName);
@@ -62,6 +65,7 @@ public class ItemController {
     return dto;
   }
 
+  //修改配置
   @PreAcquireNamespaceLock
   @RequestMapping(path = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items/{itemId}", method = RequestMethod.PUT)
   public ItemDTO update(@PathVariable("appId") String appId,
@@ -73,23 +77,25 @@ public class ItemController {
     Item entity = BeanUtils.transfrom(Item.class, itemDTO);
 
     ConfigChangeContentBuilder builder = new ConfigChangeContentBuilder();
-
+    //查找配置
     Item managedEntity = itemService.findOne(itemId);
     if (managedEntity == null) {
       throw new BadRequestException("item not exist");
     }
-
+    //更新前的配置
     Item beforeUpdateItem = BeanUtils.transfrom(Item.class, managedEntity);
 
     //protect. only value,comment,lastModifiedBy can be modified
+    //只有value/comment/lastModifiedBy可以被更改
     managedEntity.setValue(entity.getValue());
     managedEntity.setComment(entity.getComment());
     managedEntity.setDataChangeLastModifiedBy(entity.getDataChangeLastModifiedBy());
-
+    //更新配置
     entity = itemService.update(managedEntity);
+    //对比出差异，返回ConfigChangeContentBuilder
     builder.updateItem(beforeUpdateItem, entity);
     itemDTO = BeanUtils.transfrom(ItemDTO.class, entity);
-
+    //如果有差异部分，提交
     if (builder.hasContent()) {
       Commit commit = new Commit();
       commit.setAppId(appId);
@@ -104,17 +110,20 @@ public class ItemController {
     return itemDTO;
   }
 
+  //删除配置
   @PreAcquireNamespaceLock
   @RequestMapping(path = "/items/{itemId}", method = RequestMethod.DELETE)
   public void delete(@PathVariable("itemId") long itemId, @RequestParam String operator) {
+    //先查找配置
     Item entity = itemService.findOne(itemId);
     if (entity == null) {
       throw new NotFoundException("item not found for itemId " + itemId);
     }
+    //存在就删除
     itemService.delete(entity.getId(), operator);
 
     Namespace namespace = namespaceService.findOne(entity.getNamespaceId());
-
+    //提交
     Commit commit = new Commit();
     commit.setAppId(namespace.getAppId());
     commit.setClusterName(namespace.getClusterName());
@@ -125,6 +134,7 @@ public class ItemController {
     commitService.save(commit);
   }
 
+  //查找当前条件下所有配置
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items", method = RequestMethod.GET)
   public List<ItemDTO> findItems(@PathVariable("appId") String appId,
                                  @PathVariable("clusterName") String clusterName,
@@ -132,6 +142,7 @@ public class ItemController {
     return BeanUtils.batchTransform(ItemDTO.class, itemService.findItemsWithOrdered(appId, clusterName, namespaceName));
   }
 
+  //根据itemId查找配置
   @RequestMapping(value = "/items/{itemId}", method = RequestMethod.GET)
   public ItemDTO get(@PathVariable("itemId") long itemId) {
     Item item = itemService.findOne(itemId);
@@ -141,6 +152,7 @@ public class ItemController {
     return BeanUtils.transfrom(ItemDTO.class, item);
   }
 
+  //查找当前条件下具体某一配置
   @RequestMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items/{key:.+}", method = RequestMethod.GET)
   public ItemDTO get(@PathVariable("appId") String appId,
                      @PathVariable("clusterName") String clusterName,
