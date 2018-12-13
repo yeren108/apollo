@@ -176,7 +176,7 @@ public class RemoteConfigLongPollService {
         final HttpResponse<List<ApolloConfigNotification>> response =
             m_httpUtil.doGet(request, m_responseType);
 
-        logger.debug("===http long polling-response==========>>>Long polling response: {}, url: {}", response.getStatusCode(), URLDecoder.decode(url,"utf-8"));
+        logger.info("===http long polling-response==========>>>Long polling response code: {}, responseBody: {}", response.getStatusCode(), response.getBody());
         if (response.getStatusCode() == 200 && response.getBody() != null) {
           updateNotifications(response.getBody());
           updateRemoteNotifications(response.getBody());

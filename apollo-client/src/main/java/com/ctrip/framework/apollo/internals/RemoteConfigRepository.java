@@ -93,7 +93,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
         m_configUtil.getOnErrorRetryInterval() * 8);
     gson = new Gson();
     this.trySync();
-    //5毫秒同步一次
+    //5分钟同步一次
     this.schedulePeriodicRefresh();
     //http long pulling 定时任务开启
     this.scheduleLongPollingRefresh();
@@ -143,7 +143,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
 
       //reference equals means HTTP 304
       if (previous != current) {
-        logger.debug("Remote Config refreshed!");
+        logger.info("Remote Config refreshed!");
         m_configCache.set(current);
         this.fireRepositoryChange(m_namespace, this.getConfig());
       }
@@ -235,7 +235,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
 
           ApolloConfig result = response.getBody();
 
-          logger.debug("Loaded config for {}: {}", m_namespace, result);
+          logger.info("Loaded config for {}: {}", m_namespace, result);
 
           return result;
         } catch (ApolloConfigStatusCodeException ex) {
