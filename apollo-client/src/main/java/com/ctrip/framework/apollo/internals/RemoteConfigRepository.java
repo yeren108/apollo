@@ -1,6 +1,9 @@
 package com.ctrip.framework.apollo.internals;
 
 import com.ctrip.framework.apollo.enums.ConfigSourceType;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +93,9 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
         m_configUtil.getOnErrorRetryInterval() * 8);
     gson = new Gson();
     this.trySync();
+    //5毫秒同步一次
     this.schedulePeriodicRefresh();
+    //http long pulling 定时任务开启
     this.scheduleLongPollingRefresh();
   }
 
@@ -113,14 +118,14 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
   }
 
   private void schedulePeriodicRefresh() {
-    logger.debug("Schedule periodic refresh with interval: {} {}",
+    logger.info("Schedule periodic refresh with interval: {} {}",
         m_configUtil.getRefreshInterval(), m_configUtil.getRefreshIntervalTimeUnit());
     m_executorService.scheduleAtFixedRate(
         new Runnable() {
           @Override
           public void run() {
             Tracer.logEvent("Apollo.ConfigService", String.format("periodicRefresh: %s", m_namespace));
-            logger.debug("refresh config for namespace: {}", m_namespace);
+            logger.info("refresh config for namespace: {}", m_namespace);
             trySync();
             Tracer.logEvent("Apollo.Client.Version", Apollo.VERSION);
           }
@@ -205,7 +210,11 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
         url = assembleQueryConfigUrl(configService.getHomepageUrl(), appId, cluster, m_namespace,
                 dataCenter, m_remoteMessages.get(), m_configCache.get());
 
-        logger.debug("Loading config from {}", url);
+        try {
+          logger.info("===client-loadApolloConfig=========>Loading config from {}", URLDecoder.decode(url,"utf-8"));
+        } catch (UnsupportedEncodingException e) {
+          e.printStackTrace();
+        }
         HttpRequest request = new HttpRequest(url);
 
         Transaction transaction = Tracer.newTransaction("Apollo.ConfigService", "queryConfig");
@@ -220,7 +229,7 @@ public class RemoteConfigRepository extends AbstractConfigRepository {
           transaction.setStatus(Transaction.SUCCESS);
 
           if (response.getStatusCode() == 304) {
-            logger.debug("Config server responds with 304 HTTP status code.");
+            logger.info("Config server responds with 304 HTTP status code.");
             return m_configCache.get();
           }
 

@@ -2,6 +2,8 @@ package com.ctrip.framework.apollo.configservice.controller;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -10,6 +12,8 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,14 +59,17 @@ public class ConfigController {
 
   private static final Type configurationTypeReference = new TypeToken<Map<String, String>>() {
       }.getType();
-
+  private static final Logger logger = LoggerFactory.getLogger(ConfigController.class);
   /**
-   *  eg:
+   *
    *  http://ip:port/configs/appid/cluster/namespace?dataCenter=dataCenterStr&ip=ipStr
    *  &message=messageStr&releaseKey=releaseKeyStr
    *
+   *  eg:
    *  http://1.1.1.1:8080/configs/10001/default/FX.grayscaleIP.properties?dataCenter=gl&ip=127.0.0.1
    *  &message={"details":{"10001+default+FX.grayscaleIP":1159}}&releaseKey=20181101155641-af002bf0f95b6782
+   *
+   *  这个接口是补偿机制接口，每5分钟，客户端主动从服务端获取一次配置。
    *
    */
   @RequestMapping(value = "/{appId}/{clusterName}/{namespace:.+}", method = RequestMethod.GET)
@@ -73,6 +80,8 @@ public class ConfigController {
                                   @RequestParam(value = "ip", required = false) String clientIp,
                                   @RequestParam(value = "messages", required = false) String messagesAsString,
                                   HttpServletRequest request, HttpServletResponse response) throws IOException {
+    SimpleDateFormat myFmt=new SimpleDateFormat("yyyy年MM月dd日 HH时mm分ss秒");
+    logger.info("---------------------------------------------------------------------queryConfig--------->>"+String.valueOf(myFmt.format(new Date())));
     String originalNamespace = namespace;
     //namespace去掉.properties后缀
     namespace = namespaceUtil.filterNamespaceName(namespace);
