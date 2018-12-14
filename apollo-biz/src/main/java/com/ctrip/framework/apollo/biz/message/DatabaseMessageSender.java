@@ -31,6 +31,7 @@ import javax.annotation.PostConstruct;
 public class DatabaseMessageSender implements MessageSender {
   private static final Logger logger = LoggerFactory.getLogger(DatabaseMessageSender.class);
   private static final int CLEAN_QUEUE_MAX_SIZE = 100;
+  //releaseMessage的id的阻塞队列，长度为100
   private BlockingQueue<Long> toClean = Queues.newLinkedBlockingQueue(CLEAN_QUEUE_MAX_SIZE);
   private final ExecutorService cleanExecutorService;
   private final AtomicBoolean cleanStopped;
@@ -69,11 +70,14 @@ public class DatabaseMessageSender implements MessageSender {
 
   @PostConstruct
   private void initialize() {
+    //程序启动的时候会启动一个线程，
     cleanExecutorService.submit(() -> {
       while (!cleanStopped.get() && !Thread.currentThread().isInterrupted()) {
         try {
+          //1秒中从需要清理的releaseMessage的ID队列中取一个
           Long rm = toClean.poll(1, TimeUnit.SECONDS);
           if (rm != null) {
+            //
             cleanMessage(rm);
           } else {
             TimeUnit.SECONDS.sleep(5);
@@ -88,6 +92,7 @@ public class DatabaseMessageSender implements MessageSender {
   private void cleanMessage(Long id) {
     boolean hasMore = true;
     //double check in case the release message is rolled back
+    //先找一下这个releaseMessage，以防止releaseMessage回滚后消失了
     ReleaseMessage releaseMessage = releaseMessageRepository.findById(id).orElse(null);
     if (releaseMessage == null) {
       return;
@@ -95,7 +100,7 @@ public class DatabaseMessageSender implements MessageSender {
     while (hasMore && !Thread.currentThread().isInterrupted()) {
       List<ReleaseMessage> messages = releaseMessageRepository.findFirst100ByMessageAndIdLessThanOrderByIdAsc(
           releaseMessage.getMessage(), releaseMessage.getId());
-
+      //删除所有过时的ReleaseMessage
       releaseMessageRepository.deleteAll(messages);
       hasMore = messages.size() == 100;
 
