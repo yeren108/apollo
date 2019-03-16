@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+//灰度发布相关
 @RestController
 public class NamespaceBranchController {
 
@@ -39,13 +40,13 @@ public class NamespaceBranchController {
     this.namespaceService = namespaceService;
   }
 
-
+  //创建灰度分支
   @PostMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/branches")
   public NamespaceDTO createBranch(@PathVariable String appId,
                                    @PathVariable String clusterName,
                                    @PathVariable String namespaceName,
                                    @RequestParam("operator") String operator) {
-
+    //检查namespace是否存在
     checkNamespace(appId, clusterName, namespaceName);
 
     Namespace createdBranch = namespaceBranchService.createBranch(appId, clusterName, namespaceName, operator);

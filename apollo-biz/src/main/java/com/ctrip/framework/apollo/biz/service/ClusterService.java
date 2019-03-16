@@ -133,11 +133,12 @@ public class ClusterService {
   }
 
   public List<Cluster> findChildClusters(String appId, String parentClusterName) {
+    //查看父集群是否存在
     Cluster parentCluster = findOne(appId, parentClusterName);
     if (parentCluster == null) {
       throw new BadRequestException("parent cluster not exist");
     }
-
+    //根据ParentClusterId查找集群表中是否有记录，有的话就存在子集群，并返回
     return clusterRepository.findByParentClusterId(parentCluster.getId());
   }
 

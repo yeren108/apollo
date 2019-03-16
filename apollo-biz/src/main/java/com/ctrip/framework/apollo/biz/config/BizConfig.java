@@ -41,6 +41,7 @@ public class BizConfig extends RefreshableConfig {
 
   @Override
   protected List<RefreshablePropertySource> getRefreshablePropertySources() {
+    //这里返回的是当前集群中数据库中的配置
     return Collections.singletonList(propertySource);
   }
 
@@ -79,6 +80,7 @@ public class BizConfig extends RefreshableConfig {
     return namespaceValueLengthOverride;
   }
 
+  //查看数据库中namespace开关是否打开，打开：一次发布只有一个人可以修改配置   没有打开：一次发布可以有多人修改配置
   public boolean isNamespaceLockSwitchOff() {
     return !getBooleanProperty("namespace.lock.switch", false);
   }
@@ -94,6 +96,7 @@ public class BizConfig extends RefreshableConfig {
     return getValue("clogging.server.port");
   }
 
+  //namespace缓存扫描间隔，默认1
   public int appNamespaceCacheScanInterval() {
     int interval = getIntProperty("apollo.app-namespace-cache-scan.interval", DEFAULT_APPNAMESPACE_CACHE_SCAN_INTERVAL);
     return checkInt(interval, 1, Integer.MAX_VALUE, DEFAULT_APPNAMESPACE_CACHE_SCAN_INTERVAL);
@@ -103,6 +106,7 @@ public class BizConfig extends RefreshableConfig {
     return TimeUnit.SECONDS;
   }
 
+  //namespace缓存Rebuild间隔，默认60
   public int appNamespaceCacheRebuildInterval() {
     int interval = getIntProperty("apollo.app-namespace-cache-rebuild.interval", DEFAULT_APPNAMESPACE_CACHE_REBUILD_INTERVAL);
     return checkInt(interval, 1, Integer.MAX_VALUE, DEFAULT_APPNAMESPACE_CACHE_REBUILD_INTERVAL);

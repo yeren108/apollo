@@ -35,14 +35,18 @@ public class ReleaseMessageScanner implements InitializingBean {
 
   public ReleaseMessageScanner() {
     listeners = Lists.newCopyOnWriteArrayList();
+    //ReleaseMessageScanner线程
     executorService = Executors.newScheduledThreadPool(1, ApolloThreadFactory
         .create("ReleaseMessageScanner", true));
   }
 
   @Override
   public void afterPropertiesSet() throws Exception {
+    //100毫秒
     databaseScanInterval = bizConfig.releaseMessageScanIntervalInMilli();
+    //获取最大的messageId
     maxIdScanned = loadLargestMessageId();
+    //100毫秒一次的定时任务扫描releaseMessage
     executorService.scheduleWithFixedDelay((Runnable) () -> {
       Transaction transaction = Tracer.newTransaction("Apollo.ReleaseMessageScanner", "scanMessage");
       try {
@@ -82,6 +86,7 @@ public class ReleaseMessageScanner implements InitializingBean {
    * scan messages and send
    *
    * @return whether there are more messages
+   * 每次扫描500个releaseMessage，扫描了500个就返回true,不足500个就返回false
    */
   private boolean scanAndSendMessages() {
     //current batch is 500
@@ -90,8 +95,10 @@ public class ReleaseMessageScanner implements InitializingBean {
     if (CollectionUtils.isEmpty(releaseMessages)) {
       return false;
     }
+    //用已加载的messages通知listeners
     fireMessageScanned(releaseMessages);
     int messageScanned = releaseMessages.size();
+    //maxIdScanned的取值为第500（index+1）条消息的id或者最后一条消息的id
     maxIdScanned = releaseMessages.get(messageScanned - 1).getId();
     return messageScanned == 500;
   }
@@ -99,6 +106,7 @@ public class ReleaseMessageScanner implements InitializingBean {
   /**
    * find largest message id as the current start point
    * @return current largest message id
+   * 返回最大的messageId
    */
   private long loadLargestMessageId() {
     ReleaseMessage releaseMessage = releaseMessageRepository.findTopByOrderByIdDesc();
@@ -107,8 +115,10 @@ public class ReleaseMessageScanner implements InitializingBean {
 
   /**
    * Notify listeners with messages loaded
+   * 用已加载的messages通知listeners
    * @param messages
    */
+  //
   private void fireMessageScanned(List<ReleaseMessage> messages) {
     for (ReleaseMessage message : messages) {
       for (ReleaseMessageListener listener : listeners) {

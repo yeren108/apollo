@@ -49,18 +49,22 @@ public class InstanceConfigController {
     this.instanceService = instanceService;
   }
 
+  //TODO 整理清楚
   @GetMapping("/by-release")
   public PageDTO<InstanceDTO> getByRelease(@RequestParam("releaseId") long releaseId,
                                            Pageable pageable) {
+    //根据releaseId查找Release，从而获得releaseKey
     Release release = releaseService.findOne(releaseId);
     if (release == null) {
       throw new NotFoundException(String.format("release not found for %s", releaseId));
     }
+    //通过releaseKey查找instanceConfig中有没有记录
     Page<InstanceConfig> instanceConfigsPage = instanceService.findActiveInstanceConfigsByReleaseKey
         (release.getReleaseKey(), pageable);
 
     List<InstanceDTO> instanceDTOs = Collections.emptyList();
 
+    //如果instanceConfig中有记录
     if (instanceConfigsPage.hasContent()) {
       Multimap<Long, InstanceConfig> instanceConfigMap = HashMultimap.create();
       Set<String> otherReleaseKeys = Sets.newHashSet();

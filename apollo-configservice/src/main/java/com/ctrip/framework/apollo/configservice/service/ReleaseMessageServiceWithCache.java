@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Jason Song(song_s@ctrip.com)
+ * 处理release（版本）缓存的工具
  */
 @Service
 public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, InitializingBean {
@@ -98,6 +99,7 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
   @Override
   public void handleMessage(ReleaseMessage message, String channel) {
     //Could stop once the ReleaseMessageScanner starts to work
+    //一旦ReleaseMessageScanner开始工作，就可以停止
     doScan.set(false);
     logger.info("message received - channel: {}, message: {}", channel, message);
 
@@ -109,9 +111,11 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
 
     long gap = message.getId() - maxIdScanned;
     if (gap == 1) {
+      //数据库新则一个releaseMessage,id就会+1，这样新发布的releaseMessage就要合并到缓存中
       mergeReleaseMessage(message);
     } else if (gap > 1) {
       //gap found!
+      //如果不止大1,则是configservice应用启动过程中，需要load所有的releaseMessage
       loadReleaseMessages(maxIdScanned);
     }
   }
@@ -120,9 +124,12 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
   public void afterPropertiesSet() throws Exception {
     populateDataBaseInterval();
     //block the startup process until load finished
+    //阻塞启动程序直到加载完成
     //this should happen before ReleaseMessageScanner due to autowire
+    //由于自动连接，这应该在ReleaseMessageScanner之前发生
+    //加载所有的releaseMessage
     loadReleaseMessages(0);
-
+    // 加载releaseMessage线程执行，每间隔1s执行一次
     executorService.submit(() -> {
       while (doScan.get() && !Thread.currentThread().isInterrupted()) {
         Transaction transaction = Tracer.newTransaction("Apollo.ReleaseMessageServiceWithCache",
@@ -137,6 +144,7 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
           transaction.complete();
         }
         try {
+          //sleep 1s
           scanIntervalTimeUnit.sleep(scanInterval);
         } catch (InterruptedException e) {
           //ignore
@@ -149,10 +157,12 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
     ReleaseMessage old = releaseMessageCache.get(releaseMessage.getMessage());
     if (old == null || releaseMessage.getId() > old.getId()) {
       releaseMessageCache.put(releaseMessage.getMessage(), releaseMessage);
+      //maxIdScanned为合并的这个releaseMessage的id
       maxIdScanned = releaseMessage.getId();
     }
   }
 
+  //从数据库中加载releaseMessage，从startId开始，每次取500个message，直到取完所有的message
   private void loadReleaseMessages(long startId) {
     boolean hasMore = true;
     while (hasMore && !Thread.currentThread().isInterrupted()) {
@@ -162,6 +172,7 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
       if (CollectionUtils.isEmpty(releaseMessages)) {
         break;
       }
+      //将ReleaseMessage合并到缓存中
       releaseMessages.forEach(this::mergeReleaseMessage);
       int scanned = releaseMessages.size();
       startId = releaseMessages.get(scanned - 1).getId();
@@ -171,7 +182,9 @@ public class ReleaseMessageServiceWithCache implements ReleaseMessageListener, I
   }
 
   private void populateDataBaseInterval() {
+    //1
     scanInterval = bizConfig.releaseMessageCacheScanInterval();
+    //second
     scanIntervalTimeUnit = bizConfig.releaseMessageCacheScanIntervalTimeUnit();
   }
 

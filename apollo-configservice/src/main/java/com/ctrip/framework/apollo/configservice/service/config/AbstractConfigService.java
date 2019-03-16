@@ -21,6 +21,7 @@ public abstract class AbstractConfigService implements ConfigService {
   public Release loadConfig(String clientAppId, String clientIp, String configAppId, String configClusterName,
       String configNamespace, String dataCenter, ApolloNotificationMessages clientMessages) {
     // load from specified cluster fist
+    //首先返回指定了集群名的版本
     if (!Objects.equals(ConfigConsts.CLUSTER_NAME_DEFAULT, configClusterName)) {
       Release clusterRelease = findRelease(clientAppId, clientIp, configAppId, configClusterName, configNamespace,
           clientMessages);
@@ -31,6 +32,7 @@ public abstract class AbstractConfigService implements ConfigService {
     }
 
     // try to load via data center
+    //然后返回数据中心的版本
     if (!Strings.isNullOrEmpty(dataCenter) && !Objects.equals(dataCenter, configClusterName)) {
       Release dataCenterRelease = findRelease(clientAppId, clientIp, configAppId, dataCenter, configNamespace,
           clientMessages);
@@ -40,6 +42,7 @@ public abstract class AbstractConfigService implements ConfigService {
     }
 
     // fallback to default release
+    //最后返回默认集群的版本
     return findRelease(clientAppId, clientIp, configAppId, ConfigConsts.CLUSTER_NAME_DEFAULT, configNamespace,
         clientMessages);
   }

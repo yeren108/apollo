@@ -77,14 +77,14 @@ public class NamespaceAcquireLockAspect {
     acquireLock(item.getNamespaceId(), operator);
   }
 
-  void acquireLock(String appId, String clusterName, String namespaceName,
-                           String currentUser) {
+  void acquireLock(String appId, String clusterName, String namespaceName,String currentUser) {
+    //开关配置没有打开，则不需要获取锁
     if (bizConfig.isNamespaceLockSwitchOff()) {
       return;
     }
-
+    //从数据库中拿到当前appId下的当前cluster的当前namespace
     Namespace namespace = namespaceService.findOne(appId, clusterName, namespaceName);
-
+    //获取当前用户的锁
     acquireLock(namespace, currentUser);
   }
 
@@ -105,10 +105,12 @@ public class NamespaceAcquireLockAspect {
     }
 
     long namespaceId = namespace.getId();
-
+    //从ApolloConfigDB中查找表NamespaceLock，看当前namespaceId在其中是否存在记录
     NamespaceLock namespaceLock = namespaceLockService.findLock(namespaceId);
+    //如果不存在则获取锁
     if (namespaceLock == null) {
       try {
+        //获取锁，即在表NamespaceLock新增一条该用户的记录
         tryLock(namespaceId, currentUser);
         //lock success
       } catch (DataIntegrityViolationException e) {
@@ -120,6 +122,7 @@ public class NamespaceAcquireLockAspect {
         throw e;
       }
     } else {
+      //如果存在则检查当前用户是否拥有锁
       //check lock owner is current user
       checkLock(namespace, namespaceLock, currentUser);
     }

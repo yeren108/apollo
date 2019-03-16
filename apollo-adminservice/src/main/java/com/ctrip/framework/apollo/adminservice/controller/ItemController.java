@@ -36,6 +36,7 @@ public class ItemController {
     this.commitService = commitService;
   }
 
+  //配置新增
   @PreAcquireNamespaceLock
   @PostMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items")
   public ItemDTO create(@PathVariable("appId") String appId,
@@ -44,10 +45,12 @@ public class ItemController {
     Item entity = BeanUtils.transform(Item.class, dto);
 
     ConfigChangeContentBuilder builder = new ConfigChangeContentBuilder();
+    //检查配置是否存在
     Item managedEntity = itemService.findOne(appId, clusterName, namespaceName, entity.getKey());
     if (managedEntity != null) {
       throw new BadRequestException("item already exists");
     } else {
+      //保存配置
       entity = itemService.save(entity);
       builder.createItem(entity);
     }
@@ -65,6 +68,7 @@ public class ItemController {
     return dto;
   }
 
+  //修改配置
   @PreAcquireNamespaceLock
   @PutMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items/{itemId}")
   public ItemDTO update(@PathVariable("appId") String appId,
@@ -76,7 +80,7 @@ public class ItemController {
     Item entity = BeanUtils.transform(Item.class, itemDTO);
 
     ConfigChangeContentBuilder builder = new ConfigChangeContentBuilder();
-
+    //查找配置
     Item managedEntity = itemService.findOne(itemId);
     if (managedEntity == null) {
       throw new BadRequestException("item not exist");
@@ -85,12 +89,15 @@ public class ItemController {
     Item beforeUpdateItem = BeanUtils.transform(Item.class, managedEntity);
 
     //protect. only value,comment,lastModifiedBy can be modified
+    //只有value/comment/lastModifiedBy可以被更改
     managedEntity.setValue(entity.getValue());
     managedEntity.setComment(entity.getComment());
     managedEntity.setDataChangeLastModifiedBy(entity.getDataChangeLastModifiedBy());
-
+    //更新配置
     entity = itemService.update(managedEntity);
+    //对比出差异，返回ConfigChangeContentBuilder
     builder.updateItem(beforeUpdateItem, entity);
+    //如果有差异部分，提交
     itemDTO = BeanUtils.transform(ItemDTO.class, entity);
 
     if (builder.hasContent()) {
@@ -107,17 +114,20 @@ public class ItemController {
     return itemDTO;
   }
 
+  //删除配置
   @PreAcquireNamespaceLock
   @DeleteMapping("/items/{itemId}")
   public void delete(@PathVariable("itemId") long itemId, @RequestParam String operator) {
+    //先查找配置
     Item entity = itemService.findOne(itemId);
     if (entity == null) {
       throw new NotFoundException("item not found for itemId " + itemId);
     }
+    //存在就删除
     itemService.delete(entity.getId(), operator);
 
     Namespace namespace = namespaceService.findOne(entity.getNamespaceId());
-
+    //提交
     Commit commit = new Commit();
     commit.setAppId(namespace.getAppId());
     commit.setClusterName(namespace.getClusterName());

@@ -32,6 +32,7 @@ public class NamespaceController {
                              @PathVariable("clusterName") String clusterName,
                              @Valid @RequestBody NamespaceDTO dto) {
     Namespace entity = BeanUtils.transform(Namespace.class, dto);
+    //检查创建的namespace是否存在
     Namespace managedEntity = namespaceService.findOne(appId, clusterName, entity.getNamespaceName());
     if (managedEntity != null) {
       throw new BadRequestException("namespace already exist.");
@@ -42,6 +43,7 @@ public class NamespaceController {
     return BeanUtils.transform(NamespaceDTO.class, entity);
   }
 
+  //删除namespace
   @DeleteMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName:.+}")
   public void delete(@PathVariable("appId") String appId,
                      @PathVariable("clusterName") String clusterName,
@@ -53,6 +55,7 @@ public class NamespaceController {
     namespaceService.deleteNamespace(entity, operator);
   }
 
+  //查找指定appid下的指定集群下的所有namespace
   @GetMapping("/apps/{appId}/clusters/{clusterName}/namespaces")
   public List<NamespaceDTO> find(@PathVariable("appId") String appId,
                                  @PathVariable("clusterName") String clusterName) {
@@ -60,6 +63,7 @@ public class NamespaceController {
     return BeanUtils.batchTransform(NamespaceDTO.class, groups);
   }
 
+  //根据namespace的ID查找namespace
   @GetMapping("/namespaces/{namespaceId}")
   public NamespaceDTO get(@PathVariable("namespaceId") Long namespaceId) {
     Namespace namespace = namespaceService.findOne(namespaceId);
@@ -68,6 +72,7 @@ public class NamespaceController {
     return BeanUtils.transform(NamespaceDTO.class, namespace);
   }
 
+  //查找指定appid下的指定集群下的指定namespace
   @GetMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName:.+}")
   public NamespaceDTO get(@PathVariable("appId") String appId,
                           @PathVariable("clusterName") String clusterName,
@@ -78,6 +83,7 @@ public class NamespaceController {
     return BeanUtils.transform(NamespaceDTO.class, namespace);
   }
 
+  //查找publicNamespace关联的namespace
   @GetMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/associated-public-namespace")
   public NamespaceDTO findPublicNamespaceForAssociatedNamespace(@PathVariable String appId,
                                                                 @PathVariable String clusterName,
@@ -94,6 +100,7 @@ public class NamespaceController {
   /**
    * cluster -> cluster has not published namespaces?
    */
+  // eg:  {"default":true}
   @GetMapping("/apps/{appId}/namespaces/publish_info")
   public Map<String, Boolean> namespacePublishInfo(@PathVariable String appId) {
     return namespaceService.namespacePublishInfo(appId);

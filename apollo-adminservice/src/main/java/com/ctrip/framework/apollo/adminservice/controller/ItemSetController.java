@@ -19,6 +19,7 @@ public class ItemSetController {
     this.itemSetService = itemSetService;
   }
 
+  //TODO 整理
   @PreAcquireNamespaceLock
   @PostMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/itemset")
   public ResponseEntity<Void> create(@PathVariable String appId, @PathVariable String clusterName,

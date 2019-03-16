@@ -34,7 +34,9 @@ import com.ctrip.framework.apollo.util.http.HttpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
+import java.net.URLDecoder;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -91,10 +93,12 @@ public class RemoteConfigLongPollService {
     m_longPollRateLimiter = RateLimiter.create(m_configUtil.getLongPollQPS());
   }
 
+  //http log polling
   public boolean submit(String namespace, RemoteConfigRepository remoteConfigRepository) {
     boolean added = m_longPollNamespaces.put(namespace, remoteConfigRepository);
     m_notifications.putIfAbsent(namespace, INIT_NOTIFICATION_ID);
     if (!m_longPollStarted.get()) {
+      //start http log polling
       startLongPolling();
     }
     return added;
@@ -109,18 +113,20 @@ public class RemoteConfigLongPollService {
       final String appId = m_configUtil.getAppId();
       final String cluster = m_configUtil.getCluster();
       final String dataCenter = m_configUtil.getDataCenter();
+      //延迟2000毫秒
       final long longPollingInitialDelayInMills = m_configUtil.getLongPollingInitialDelayInMills();
       m_longPollingService.submit(new Runnable() {
         @Override
         public void run() {
           if (longPollingInitialDelayInMills > 0) {
             try {
-              logger.debug("Long polling will start in {} ms.", longPollingInitialDelayInMills);
+              logger.info("Long polling will start in {} ms.", longPollingInitialDelayInMills);
               TimeUnit.MILLISECONDS.sleep(longPollingInitialDelayInMills);
             } catch (InterruptedException e) {
               //ignore
             }
           }
+          //更新
           doLongPollingRefresh(appId, cluster, dataCenter);
         }
       });
@@ -160,8 +166,9 @@ public class RemoteConfigLongPollService {
             assembleLongPollRefreshUrl(lastServiceDto.getHomepageUrl(), appId, cluster, dataCenter,
                 m_notifications);
 
-        logger.debug("Long polling from {}", url);
+        logger.info("===client http long polling==========>>>Long polling from {}", URLDecoder.decode(url,"utf-8"));
         HttpRequest request = new HttpRequest(url);
+        //90秒超时
         request.setReadTimeout(LONG_POLLING_READ_TIMEOUT);
 
         transaction.addData("Url", url);
@@ -169,7 +176,7 @@ public class RemoteConfigLongPollService {
         final HttpResponse<List<ApolloConfigNotification>> response =
             m_httpUtil.doGet(request, m_responseType);
 
-        logger.debug("Long polling response: {}, url: {}", response.getStatusCode(), url);
+        logger.info("===http long polling-response==========>>>Long polling response code: {}, responseBody: {}", response.getStatusCode(), response.getBody());
         if (response.getStatusCode() == 200 && response.getBody() != null) {
           updateNotifications(response.getBody());
           updateRemoteNotifications(response.getBody());
@@ -190,9 +197,13 @@ public class RemoteConfigLongPollService {
         Tracer.logEvent("ApolloConfigException", ExceptionUtil.getDetailMessage(ex));
         transaction.setStatus(ex);
         long sleepTimeInSecond = m_longPollFailSchedulePolicyInSecond.fail();
-        logger.warn(
-            "Long polling failed, will retry in {} seconds. appId: {}, cluster: {}, namespaces: {}, long polling url: {}, reason: {}",
-            sleepTimeInSecond, appId, cluster, assembleNamespaces(), url, ExceptionUtil.getDetailMessage(ex));
+        try {
+          logger.warn(
+              "Long polling failed, will retry in {} seconds. appId: {}, cluster: {}, namespaces: {}, long polling url: {}, reason: {}",
+              sleepTimeInSecond, appId, cluster, assembleNamespaces(), URLDecoder.decode(url,"utf-8"), ExceptionUtil.getDetailMessage(ex));
+        } catch (UnsupportedEncodingException e) {
+          e.printStackTrace();
+        }
         try {
           TimeUnit.SECONDS.sleep(sleepTimeInSecond);
         } catch (InterruptedException ie) {

@@ -43,7 +43,7 @@ public abstract class RefreshableConfig {
 
   @PostConstruct
   public void setup() {
-
+    //这里返回的是当前集群中数据库中的配置
     propertySources = getRefreshablePropertySources();
     if (CollectionUtils.isEmpty(propertySources)) {
       throw new IllegalStateException("Property sources can not be empty.");
@@ -52,23 +52,23 @@ public abstract class RefreshableConfig {
     //add property source to environment
     for (RefreshablePropertySource propertySource : propertySources) {
       propertySource.refresh();
+      //将配置放到，environment中
       environment.getPropertySources().addLast(propertySource);
     }
 
     //task to update configs
-    ScheduledExecutorService
-        executorService =
+    //设置定时任务，ThreadFactory名字以ConfigRefresher开头，将数据库中的配置同步到 propertySources
+    ScheduledExecutorService executorService =
         Executors.newScheduledThreadPool(1, ApolloThreadFactory.create("ConfigRefresher", true));
 
-    executorService
-        .scheduleWithFixedDelay(() -> {
+    executorService.scheduleWithFixedDelay(() -> {
           try {
             propertySources.forEach(RefreshablePropertySource::refresh);
           } catch (Throwable t) {
             logger.error("Refresh configs failed.", t);
             Tracer.logError("Refresh configs failed.", t);
           }
-        }, CONFIG_REFRESH_INTERVAL, CONFIG_REFRESH_INTERVAL, TimeUnit.SECONDS);
+     }, CONFIG_REFRESH_INTERVAL, CONFIG_REFRESH_INTERVAL, TimeUnit.SECONDS);
   }
 
   public int getIntProperty(String key, int defaultValue) {
@@ -110,6 +110,7 @@ public abstract class RefreshableConfig {
     }
   }
 
+  //从环境中获取
   public String getValue(String key) {
     return environment.getProperty(key);
   }
